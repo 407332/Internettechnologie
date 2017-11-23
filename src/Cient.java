@@ -1,32 +1,60 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class Cient {
 
+    private Socket socket;
+
     public static void main(String[] args) throws IOException {
-        Socket socket = new Socket("LOCALHOST", 1337);
+        new Cient().run();
+    }
 
-        OutputHandler out =  new OutputHandler(socket);
-        Thread outputThread = new Thread(out);
+    public void run(){
+        connect();
 
-        InputHandler inputHandler = new InputHandler(socket,outputThread);
-        Thread inputThread = new Thread(inputHandler);
+        DataSenderRunnable dataSenderRunnable = new DataSenderRunnable(socket);
+        Thread senderThread = new Thread(dataSenderRunnable);
+        senderThread.start();
 
-        outputThread.start();
-        inputThread.start();
+        DataGetterRunnable dataGetterRunnable = new DataGetterRunnable(socket,dataSenderRunnable);
+        Thread getterThread = new Thread(dataGetterRunnable);
+        getterThread.start();
+    }
 
 
 
+    private void connect() {
+        try {
+            String welcomeLine = "";
+            while (!welcomeLine.equals("HELO Welkom to WhatsUpp!")) {
+                System.out.println("connecting...");
+                if (socket != null) {
+                    socket.close();
+                    socket = null;
+                }
+                this.socket = new Socket("LOCALHOST", 1337);
 
-//        MultiThreadSort multiThreadSort = new MultiThreadSort(list,threshold);
-//        Thread multiThreadStart = new Thread(multiThreadSort);
-//        multiThreadStart.start();
-//        try {
-//            multiThreadStart.join();
-//        } catch (InterruptedException ie) {
-//            ie.printStackTrace();
-//        }
-//        result = multiThreadSort.getList();
+                InputStream inputStream = socket.getInputStream();
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
+                CountDownLatch latch = new CountDownLatch(1);
+
+                BufferReaderRunnable bufferReaderRunnable = new BufferReaderRunnable(bufferedReader,latch);
+                Thread bufferReaderThread = new Thread(bufferReaderRunnable);
+                bufferReaderThread.start();
+
+                latch.await(1000, TimeUnit.MILLISECONDS);
+
+                welcomeLine = bufferReaderRunnable.getResult();
+            }
+            System.out.println(welcomeLine);
+
+        } catch (IOException ioe) {
+            ioe.getStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }
