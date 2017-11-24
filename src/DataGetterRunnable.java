@@ -1,17 +1,22 @@
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 
 
 public class DataGetterRunnable implements Runnable {
 
     private Socket socket;
-    private DataSenderRunnable sender;
-
     private BufferedReader bufferedReader;
+    private Client client;
 
-    public DataGetterRunnable(Socket socket, DataSenderRunnable sender) {
+    private boolean waitingForData;
+    private boolean kill;
+
+
+
+    public DataGetterRunnable(Client client, Socket socket) {
+        this.client = client;
         this.socket = socket;
-        this.sender = sender;
     }
 
     @Override
@@ -20,13 +25,27 @@ public class DataGetterRunnable implements Runnable {
             InputStream inputStream = socket.getInputStream();
             this.bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
-            while (true) {
+            while (!kill) {
                 String line = bufferedReader.readLine();
+                if(waitingForData){
+                    client.confirmData(line);
+                }
                 System.out.println(line);
             }
+
+        }catch(SocketException se){
 
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.println("killing getter");
+    }
+
+    public void setWaitingForData() {
+        this.waitingForData = true;
+    }
+
+    public void kill(){
+        this.kill=true;
     }
 }
