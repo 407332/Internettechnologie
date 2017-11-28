@@ -8,10 +8,13 @@ import java.util.concurrent.TimeUnit;
 
 public class ConnectRunnable implements Runnable {
 
+    private final int TIMEOUT_TRIES = 7;
+
     private Socket socket;
     private boolean isConnected;
     private boolean hasConnectedBefore;
     private Client client;
+    private boolean keepConnecting = true;
 
     public ConnectRunnable (Client client){
         this.client = client;
@@ -19,39 +22,49 @@ public class ConnectRunnable implements Runnable {
 
     @Override
     public void run() {
-        while (true) {
-            while (!isConnected) {
+        int connectingCounter = TIMEOUT_TRIES;
+        while (keepConnecting) {
+            if (!isConnected) {
                 try {
                     String welcomeLine = "";
-                    while (!welcomeLine.equals("HELO Welkom to WhatsUpp!")) {
-                        System.out.println("connecting...");
-                        if (socket != null) {
-                            socket.close();
-                            socket = null;
+                    while (!welcomeLine.equals("HELO Welkom to WhatsUpp!") && keepConnecting) {
+                        connectingCounter --;
+                        if(connectingCounter == 0){
+                            keepConnecting = false;
+                        }else {
+                            System.out.println("connecting...");
+                            if (socket != null) {
+                                socket.close();
+                                socket = null;
+                            }
+                            this.socket = new Socket("LOCALHOST", 1337);
+
+                            InputStream inputStream = socket.getInputStream();
+                            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+                            CountDownLatch latch = new CountDownLatch(1);
+
+                            BufferReaderRunnable bufferReaderRunnable = new BufferReaderRunnable(bufferedReader, latch);
+                            Thread bufferReaderThread = new Thread(bufferReaderRunnable);
+                            bufferReaderThread.start();
+
+                            latch.await(500, TimeUnit.MILLISECONDS);
+
+                            welcomeLine = bufferReaderRunnable.getResult();
                         }
-                        this.socket = new Socket("LOCALHOST", 1337);
-
-                        InputStream inputStream = socket.getInputStream();
-                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-
-                        CountDownLatch latch = new CountDownLatch(1);
-
-                        BufferReaderRunnable bufferReaderRunnable = new BufferReaderRunnable(bufferedReader, latch);
-                        Thread bufferReaderThread = new Thread(bufferReaderRunnable);
-                        bufferReaderThread.start();
-
-                        latch.await(1000, TimeUnit.MILLISECONDS);
-
-                        welcomeLine = bufferReaderRunnable.getResult();
                     }
-                    isConnected = true;
-                    client.connected();
+                    if(welcomeLine.equals("HELO Welkom to WhatsUpp!")) {
+                        connectingCounter = TIMEOUT_TRIES;
+                        isConnected = true;
+                        client.connected();
 
-                    if(!hasConnectedBefore){
-                        System.out.println(welcomeLine);
-                        hasConnectedBefore = true;
+                        if(!hasConnectedBefore){
+                            System.out.println(welcomeLine);
+                            hasConnectedBefore = true;
+                        }
+                    }else{
+                        System.out.println("Can't reach server shutting down....");
                     }
-
                 } catch (IOException ioe) {
                     ioe.getStackTrace();
                 } catch (InterruptedException e) {
@@ -60,7 +73,7 @@ public class ConnectRunnable implements Runnable {
             }
 
             try {
-                Thread.sleep(1000);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -73,5 +86,9 @@ public class ConnectRunnable implements Runnable {
 
     public void reconnect() {
         isConnected = false;
+    }
+
+    public void kill(){
+        keepConnecting = false;
     }
 }

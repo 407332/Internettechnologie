@@ -4,10 +4,14 @@ import java.net.Socket;
 public class Client {
 
     private Socket socket;
+
     private String currentUsername = "";
+    private String lastDroppedMessage = "";
+
     private ConnectRunnable connectRunnable;
     private DataSenderRunnable dataSenderRunnable;
     private DataGetterRunnable dataGetterRunnable;
+
 
     public static void main(String[] args) throws IOException {
         new Client().run();
@@ -46,6 +50,26 @@ public class Client {
     public void killProcesses(){
         dataGetterRunnable.kill();
         dataSenderRunnable.kill();
+    }
+
+    public void setCurrentUsername(String currentUsername) {
+        this.currentUsername = currentUsername;
+    }
+
+    public String getCurrentUsername() {
+        return currentUsername;
+    }
+
+    public void setLastDroppedMessage(String lastDroppedMessage) {
+        this.lastDroppedMessage = lastDroppedMessage;
+    }
+
+    public String getLastDroppedMessage() {
+        return lastDroppedMessage;
+    }
+
+    public void stopConnecting(){
+        connectRunnable.kill();
     }
 
 }

@@ -46,6 +46,11 @@ public class DataGetterRunnable implements Runnable {
     }
 
     public void kill(){
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         this.kill=true;
     }
 }
