@@ -1,3 +1,5 @@
+import org.omg.PortableServer.THREAD_POLICY_ID;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,26 +33,24 @@ public class ConnectRunnable implements Runnable {
                         connectingCounter --;
                         if(connectingCounter == 0){
                             keepConnecting = false;
+                            client.killUserInput();
                         }else {
-                            System.out.println("connecting...");
+                            //System.out.println("connecting...");
                             if (socket != null) {
                                 socket.close();
                                 socket = null;
                             }
                             this.socket = new Socket("LOCALHOST", 1337);
 
-                            InputStream inputStream = socket.getInputStream();
-                            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-
                             CountDownLatch latch = new CountDownLatch(1);
 
-                            BufferReaderRunnable bufferReaderRunnable = new BufferReaderRunnable(bufferedReader, latch);
-                            Thread bufferReaderThread = new Thread(bufferReaderRunnable);
-                            bufferReaderThread.start();
+                            DataGetterRunnable getterRunnable = new DataGetterRunnable(socket,latch);
+                            Thread getterThread = new Thread(getterRunnable);
+                            getterThread.start();
 
                             latch.await(500, TimeUnit.MILLISECONDS);
 
-                            welcomeLine = bufferReaderRunnable.getResult();
+                            welcomeLine = getterRunnable.getConnectionResult();
                         }
                     }
                     if(welcomeLine.equals("HELO Welkom to WhatsUpp!")) {

@@ -6,11 +6,12 @@ public class Client {
     private Socket socket;
 
     private String currentUsername = "";
-    private String lastDroppedMessage = "";
+    private String lastMessage = "";
 
     private ConnectRunnable connectRunnable;
     private DataSenderRunnable dataSenderRunnable;
     private DataGetterRunnable dataGetterRunnable;
+    private UserInputRunnable  userInputRunnable;
 
 
     public static void main(String[] args) throws IOException {
@@ -21,6 +22,10 @@ public class Client {
         connectRunnable = new ConnectRunnable(this);
         Thread connectThread = new Thread(connectRunnable);
         connectThread.start();
+
+        userInputRunnable = new UserInputRunnable();
+        Thread userInputThread = new Thread(userInputRunnable);
+        userInputThread.start();
     }
 
     public void connected() {
@@ -35,6 +40,18 @@ public class Client {
         getterThread.start();
     }
 
+    public void killUserInput(){
+        userInputRunnable.kill();
+    }
+
+    public String getNextMessage(){
+        return userInputRunnable.getNextMessage();
+    }
+
+    public boolean hasMessages(){
+        return userInputRunnable.hasMessages();
+    }
+
     public void setWaitingForData(){
         dataGetterRunnable.setWaitingForData();
     }
@@ -43,13 +60,10 @@ public class Client {
         dataSenderRunnable.receivedData(data);
     }
 
-    public void reconnect(){
-        connectRunnable.reconnect();
-    }
-
     public void killProcesses(){
         dataGetterRunnable.kill();
         dataSenderRunnable.kill();
+        connectRunnable.reconnect();
     }
 
     public void setCurrentUsername(String currentUsername) {
@@ -60,12 +74,12 @@ public class Client {
         return currentUsername;
     }
 
-    public void setLastDroppedMessage(String lastDroppedMessage) {
-        this.lastDroppedMessage = lastDroppedMessage;
+    public void setLastMessage(String lastMessage) {
+        this.lastMessage = lastMessage;
     }
 
-    public String getLastDroppedMessage() {
-        return lastDroppedMessage;
+    public String getLastMessage() {
+        return lastMessage;
     }
 
     public void stopConnecting(){
