@@ -46,7 +46,7 @@ public class DataGetterRunnable implements Runnable {
                     }
                     else if (line == null) {
                         client.killProcesses();
-                    }else if (line.contains("BCST")) {
+                    }else if (line.startsWith("BCST")) {
                         System.out.println(line);
                     }
                 }

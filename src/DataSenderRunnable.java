@@ -39,8 +39,7 @@ public class DataSenderRunnable implements Runnable {
                         }
                         if (client.hasMessages()) {
                             username = client.getNextMessage();
-                        }else {
-                            if (!username.contains(" ") && username.length() > 2) {
+                            if (!username.contains(" ") && username.length() > 2 && username.matches("[a-zA-Z0-9_]{3,14}")) {
                                 goodName = true;
                             } else {
                                 System.out.println("Username not accepted try again.");
@@ -48,7 +47,7 @@ public class DataSenderRunnable implements Runnable {
                         }
                     }
                     client.setCurrentUsername(username);
-                }else {
+                } else {
                     // System.out.println("sending login username: " + client.getCurrentUsername());
                     sendMessage("HELO " + client.getCurrentUsername());
 
@@ -107,7 +106,6 @@ public class DataSenderRunnable implements Runnable {
     }
 
     public void receivedData(String data) {
-        // System.out.println("DATASENDER GOT DATA: " + data);
         if (data.equals("+OK " + client.getCurrentUsername())) {
             usernameAccepted = true;
             latch.countDown();
@@ -119,7 +117,7 @@ public class DataSenderRunnable implements Runnable {
             System.out.println("Username Already loggedin.");
             client.setCurrentUsername("");
             latch.countDown();
-        } else if (data.equals("+OK Goodbye")) {
+        }else if (data.equals("+OK Goodbye")) {
             System.out.println("Quitting succesfull.");
             latch.countDown();
             dataAccepted = true;

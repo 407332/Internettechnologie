@@ -1,7 +1,4 @@
-import java.util.ArrayList;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Scanner;
+import java.util.*;
 
 public class UserInputRunnable implements Runnable {
 
@@ -13,7 +10,11 @@ public class UserInputRunnable implements Runnable {
     @Override
     public void run() {
         while(!kill){
-            messages.add(userIn.nextLine());
+            String input = userIn.nextLine();
+            messages.add(input);
+            if(input.equals("QUIT")){
+                kill = true;
+            }
         }
     }
 
