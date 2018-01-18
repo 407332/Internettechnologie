@@ -76,7 +76,7 @@ public class DataSenderRunnable implements Runnable {
                 dataAccepted = false;
                 while (!dataAccepted && !kill) {
                     // System.out.println("sending message: " + message + "...");
-                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG") || message.startsWith("LSTGRP")) {
+                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG") || message.equals("LSTGRP")) {
                         sendMessage(message);
                     } else if (message.startsWith("MKGRP")) {
                         String[] parse = message.split(" ");
@@ -94,6 +94,24 @@ public class DataSenderRunnable implements Runnable {
                         } else {
                             System.out.println("Groupname not accepted");
                         }
+                    }else if(message.startsWith("BCGRP")){
+                        String[] parse = message.split(" ");
+                        boolean isValidGroupname = false;
+                        if (parse.length > 2){
+                            String groupname = parse[1];
+                            isValidGroupname = groupname.matches("[a-zA-Z0-9_]{3,15}");
+                        }else{
+                            System.out.println("invalid message");
+                            client.setLastMessage("");
+                            break;
+                        }
+                        if (isValidGroupname) {
+                            sendMessage(message);
+                        } else {
+                            System.out.println("Groupname not accepted");
+                            client.setLastMessage("");
+                        }
+
                     }else{
                         sendMessage("BCST " + message);
                     }
@@ -148,6 +166,8 @@ public class DataSenderRunnable implements Runnable {
             System.out.println("Group already exists");
             dataAccepted = true;
             client.setLastMessage("");
+        }else if (data.startsWith("+OK Groups:")){
+            System.out.println(data);
         }
         latch.countDown();
     }
