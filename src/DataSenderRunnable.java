@@ -76,7 +76,7 @@ public class DataSenderRunnable implements Runnable {
                 dataAccepted = false;
                 while (!dataAccepted && !kill) {
                     // System.out.println("sending message: " + message + "...");
-                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG") || message.startsWith("LSTGRP")) {
+                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG") || message.startsWith("LSTGRP") || message.startsWith("JNGRP")) {
                         sendMessage(message);
                     } else if (message.startsWith("MKGRP")) {
                         String[] parse = message.split(" ");
@@ -139,7 +139,11 @@ public class DataSenderRunnable implements Runnable {
             System.out.println("Username Doesn't exist");
             dataAccepted = true;
             client.setLastMessage("");
-        } else if (data.equals("+OK Goodbye")) {
+        } else if(data.equals("-ERR Group doesn't exist.")) {
+            System.out.println("Group Doesn't exist");
+            dataAccepted = true;
+            client.setLastMessage("");
+        }else if (data.equals("+OK Goodbye")) {
             System.out.println("Quitting succesfull.");
             dataAccepted = true;
             client.stopConnecting();
