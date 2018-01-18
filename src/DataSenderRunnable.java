@@ -76,11 +76,7 @@ public class DataSenderRunnable implements Runnable {
                 dataAccepted = false;
                 while (!dataAccepted && !kill) {
                     // System.out.println("sending message: " + message + "...");
-<<<<<<< HEAD
                     if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG") || message.startsWith("LSTGRP") || message.startsWith("JNGRP")) {
-=======
-                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG") || message.equals("LSTGRP")) {
->>>>>>> 934d2763ddcdf710726281593b18a791e574a56d
                         sendMessage(message);
                     } else if (message.startsWith("MKGRP")) {
                         String[] parse = message.split(" ");
