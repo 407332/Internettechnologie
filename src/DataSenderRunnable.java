@@ -76,7 +76,7 @@ public class DataSenderRunnable implements Runnable {
                 dataAccepted = false;
                 while (!dataAccepted && !kill) {
                     // System.out.println("sending message: " + message + "...");
-                    if (message.equals("QUIT")) {
+                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG")) {
                         sendMessage(message);
                     } else {
                         sendMessage("BCST " + message);
@@ -106,24 +106,30 @@ public class DataSenderRunnable implements Runnable {
     }
 
     public void receivedData(String data) {
+//        System.out.println(data);
         if (data.equals("+OK " + client.getCurrentUsername())) {
             usernameAccepted = true;
-            latch.countDown();
-        } else if (data.equals("+OK")) {
+        } else if (data.startsWith("+OK")) {
             client.setLastMessage("");
             dataAccepted = true;
-            latch.countDown();
-        } else if (data.equals("-ERR user already logged in")) {
+            if (data.length() > 3) {
+                System.out.println(data.substring(4));
+            }
+        }
+        else if (data.equals("-ERR user already logged in")) {
             System.out.println("Username Already loggedin.");
             client.setCurrentUsername("");
-            latch.countDown();
-        }else if (data.equals("+OK Goodbye")) {
+        } else if (data.equals("-ERR Username doesn't exist.")) {
+            System.out.println("Username Doesn't exist");
+            dataAccepted = true;
+            client.setLastMessage("");
+        } else if (data.equals("+OK Goodbye")) {
             System.out.println("Quitting succesfull.");
-            latch.countDown();
             dataAccepted = true;
             client.stopConnecting();
             client.killProcesses();
         }
+        latch.countDown();
     }
 
     public void kill() {

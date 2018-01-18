@@ -46,8 +46,11 @@ public class DataGetterRunnable implements Runnable {
                     }
                     else if (line == null) {
                         client.killProcesses();
-                    }else if (line.startsWith("BCST")) {
-                        System.out.println(line);
+                    }else if (line.startsWith("WHISPER")){
+                        String[] split = line.split(" ");
+                        System.out.println("["+split[1]+"](WHISPER) " + line.substring(split[0].length()+split[1].length()+2));
+                    } if (line.startsWith("BCST")) {
+                        System.out.println(line.substring(line.split(" ")[0].length() +1));
                     }
                 }
             }
