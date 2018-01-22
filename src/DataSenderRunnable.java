@@ -93,6 +93,7 @@ public class DataSenderRunnable implements Runnable {
                             sendMessage(message);
                         } else {
                             System.out.println("Groupname not accepted");
+                            client.setLastMessage("");
                         }
                     }else if(message.startsWith("BCGRP")){
                         String[] parse = message.split(" ");
@@ -111,13 +112,49 @@ public class DataSenderRunnable implements Runnable {
                             System.out.println("Groupname not accepted");
                             client.setLastMessage("");
                         }
-
+                    }else if(message.startsWith("LVGRP")){
+                        String[] parse = message.split(" ");
+                        boolean isValidGroupname = false;
+                        if (parse.length > 1){
+                            String groupname = parse[1];
+                            isValidGroupname = groupname.matches("[a-zA-Z0-9_]{3,15}");
+                        }else{
+                            System.out.println("invalid message");
+                            client.setLastMessage("");
+                            break;
+                        }
+                        if (isValidGroupname) {
+                            sendMessage(message);
+                        } else {
+                            System.out.println("Groupname not accepted");
+                            client.setLastMessage("");
+                        }
+                    }else if(message.startsWith("KICK")){
+                        String[] parse = message.split(" ");
+                        boolean isValidGroupname = false;
+                        boolean isValidUsername = false;
+                        if (parse.length > 2){
+                            String groupname = parse[1];
+                            String username = parse[2];
+                            isValidGroupname = groupname.matches("[a-zA-Z0-9_]{3,15}");
+                            isValidUsername = username.matches("[a-zA-Z0-9_]{3,14}");
+                        }else{
+                            System.out.println("invalid ");
+                            client.setLastMessage("");
+                            break;
+                        }
+                        if (isValidGroupname && isValidUsername) {
+                            sendMessage(message);
+                        } else {
+                            System.out.println("Groupname or Username not accepted");
+                            client.setLastMessage("");
+                        }
                     }else{
                         sendMessage("BCST " + message);
                     }
                     latch = new CountDownLatch(1);
                     client.setWaitingForData();
-                    latch.await(1000, TimeUnit.MILLISECONDS);
+                    latch.await(1500, TimeUnit.MILLISECONDS);
                 }
             }
 
@@ -166,11 +203,36 @@ public class DataSenderRunnable implements Runnable {
             dataAccepted = true;
             client.stopConnecting();
             client.killProcesses();
-        } else if (data.equals("-ERR groupname already exists")){
+        } else if (data.equals("-ERR groupname already exists")) {
             System.out.println("Group already exists");
             dataAccepted = true;
             client.setLastMessage("");
-        }else if (data.startsWith("+OK Groups:")){
+        }else if(data.equals("-ERR already joined this group.")){
+            System.out.println("You already joined this group.");
+            dataAccepted = true;
+            client.setLastMessage("");
+        } else if (data.equals("-ERR not in this group")) {
+            System.out.println("You are not in this group.");
+            dataAccepted = true;
+            client.setLastMessage("");
+        }else if (data.equals("-ERR User is not in this group")) {
+            System.out.println("The User is not in this group.");
+            dataAccepted = true;
+            client.setLastMessage("");
+        }else if (data.equals("-ERR You are not the owner")) {
+            System.out.println("You are not the owner of that group.");
+            dataAccepted = true;
+            client.setLastMessage("");
+        }else if (data.equals("+OK kicked From group")) {
+            System.out.println(data.substring(4));
+            dataAccepted = true;
+            client.setLastMessage("");
+        }else if (data.equals("-ERR You cannot kick yourself")) {
+            System.out.println("You cannot kick yourself.");
+            dataAccepted = true;
+            client.setLastMessage("");
+        }
+        else if (data.startsWith("+OK Groups:")){
             System.out.println(data);
         }
         latch.countDown();
