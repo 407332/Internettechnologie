@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.security.*;
 
 public class Client {
 
@@ -11,7 +12,11 @@ public class Client {
     private ConnectRunnable connectRunnable;
     private DataSenderRunnable dataSenderRunnable;
     private DataGetterRunnable dataGetterRunnable;
-    private UserInputRunnable  userInputRunnable;
+    private UserInputRunnable userInputRunnable;
+
+    private KeyPair keyPair;
+    private PublicKey publicKey;
+    private PrivateKey privateKey;
 
 
     public static void main(String[] args) throws IOException {
@@ -19,6 +24,11 @@ public class Client {
     }
 
     public void run() {
+
+        keyPair = buildKeyPair();
+        publicKey = keyPair.getPublic();
+        privateKey = keyPair.getPrivate();
+
         connectRunnable = new ConnectRunnable(this);
         Thread connectThread = new Thread(connectRunnable);
         connectThread.start();
@@ -40,27 +50,27 @@ public class Client {
         getterThread.start();
     }
 
-    public void killUserInput(){
+    public void killUserInput() {
         userInputRunnable.kill();
     }
 
-    public String getNextMessage(){
+    public String getNextMessage() {
         return userInputRunnable.getNextMessage();
     }
 
-    public boolean hasMessages(){
+    public boolean hasMessages() {
         return userInputRunnable.hasMessages();
     }
 
-    public void setWaitingForData(){
+    public void setWaitingForData() {
         dataGetterRunnable.setWaitingForData();
     }
 
-    public void confirmData(String data){
+    public void confirmData(String data) {
         dataSenderRunnable.receivedData(data);
     }
 
-    public void killProcesses(){
+    public void killProcesses() {
         dataGetterRunnable.kill();
         dataSenderRunnable.kill();
         connectRunnable.reconnect();
@@ -82,8 +92,28 @@ public class Client {
         return lastMessage;
     }
 
-    public void stopConnecting(){
+    public void stopConnecting() {
         connectRunnable.kill();
+    }
+
+
+    public static KeyPair buildKeyPair() {
+        try {
+            final int keySize = 2048;
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(keySize);
+            return keyPairGenerator.genKeyPair();
+        } catch (NoSuchAlgorithmException nsa) {
+            return null;
+        }
+    }
+
+    public PublicKey getPublicKey() {
+        return publicKey;
+    }
+
+    public PrivateKey getPrivateKey() {
+        return privateKey;
     }
 
 }

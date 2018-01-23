@@ -1,7 +1,9 @@
+import javax.crypto.Cipher;
 import java.io.*;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.Socket;
+import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
@@ -17,6 +19,8 @@ public class DataSenderRunnable implements Runnable {
     private boolean kill;
     private boolean usernameAccepted;
     private boolean dataAccepted;
+
+    private PrivateKey privateKey;
 
 
     public DataSenderRunnable(Client client, Socket socket) {
@@ -48,6 +52,7 @@ public class DataSenderRunnable implements Runnable {
                         }
                     }
                     client.setCurrentUsername(username);
+                    privateKey = client.getPrivateKey();
                 } else {
                     // System.out.println("sending login username: " + client.getCurrentUsername());
                     sendMessage("HELO " + client.getCurrentUsername());
@@ -290,6 +295,13 @@ public class DataSenderRunnable implements Runnable {
             System.out.println(data);
         }
         latch.countDown();
+    }
+
+
+    public static byte[] encrypt(PrivateKey privateKey, String message) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, privateKey);
+        return cipher.doFinal(message.getBytes());
     }
 
     public void kill() {
