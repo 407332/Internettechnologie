@@ -53,7 +53,7 @@ public class DataGetterRunnable implements Runnable {
                         try {
                             if (split.length > 1){
                             System.out.println("getting a file from " + split[2]);
-                            receivedata();
+                            receiveFile();
                             }else {
                                 System.out.println("Filetransfer had a problem");
                             }
@@ -88,7 +88,7 @@ public class DataGetterRunnable implements Runnable {
         return connectionResult;
     }
 
-    public void receivedata() throws IOException {
+    public void receiveFile() throws IOException {
         DataInputStream is = new DataInputStream(socket.getInputStream());
         byte[] buffer = new byte[4096];
 
@@ -109,7 +109,7 @@ public class DataGetterRunnable implements Runnable {
             fos.write(buffer, 0, read);
         }
         if (totalRead == filesize){
-            System.out.println("the file has been received");
+            System.out.println("file: "+ file +" has been received");
             fos.close();
         }else {
             System.out.println("Filetransfer had a problem");

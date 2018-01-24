@@ -31,8 +31,8 @@ public class DataSenderRunnable implements Runnable {
 
     @Override
     public void run() {
+        privateKey = client.getPrivateKey();
         try {
-
             while (!usernameAccepted && !kill) {
                 if (client.getCurrentUsername().equals("")) {
                     System.out.println("Please enter a username: ");
@@ -52,7 +52,6 @@ public class DataSenderRunnable implements Runnable {
                         }
                     }
                     client.setCurrentUsername(username);
-                    privateKey = client.getPrivateKey();
                 } else {
                     // System.out.println("sending login username: " + client.getCurrentUsername());
                     sendMessage("HELO " + client.getCurrentUsername());
@@ -82,8 +81,17 @@ public class DataSenderRunnable implements Runnable {
                 dataAccepted = false;
                 while (!dataAccepted && !kill) {
                     // System.out.println("sending message: " + message + "...");
-                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("MSG") || message.startsWith("LSTGRP") || message.startsWith("JNGRP")) {
+                    if (message.equals("QUIT") || message.equals("LSTUS") || message.startsWith("LSTGRP") || message.startsWith("JNGRP")) {
                         sendMessage(message);
+                    } else if (message.startsWith("MSG")) {
+                        String[] parse = message.split(" ");
+                        if (parse.length > 2) {
+                            String recipient = parse[1];
+                            message.replace("MSG " + recipient, "");
+                            sendPrivateMessage(recipient, message);
+                        } else{
+                            System.out.println("Invalid message");
+                        }
                     } else if (message.startsWith("MKGRP")) {
                         String[] parse = message.split(" ");
                         boolean isValidGroupname = false;
@@ -211,8 +219,29 @@ public class DataSenderRunnable implements Runnable {
         }
     }
 
-    public void sendFile(File file, String username) throws IOException {
+    public void sendPrivateMessage(String recepient, String message) {
+        try {
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            byte[] encryptmsg = encrypt(privateKey, message);
+            if (encryptmsg != null) {
 
+                byte[] buffer = new byte[4096];
+
+                byte[] size = (message.length()+"").getBytes();
+                size = Arrays.copyOf(size, 4096);
+                dos.write(size);
+
+
+                PrintWriter writer = new PrintWriter(dos);
+                writer.println("MSG " + recepient + " " + encryptmsg);
+                writer.flush();
+            }
+        } catch (IOException ioe) {
+
+        }
+    }
+
+    public void sendFile(File file, String username) throws IOException {
         sendMessage("TRNSFR " + username);
 
         FileInputStream fis = new FileInputStream(file);
@@ -238,8 +267,7 @@ public class DataSenderRunnable implements Runnable {
         if (data.equals("+OK " + client.getCurrentUsername())) {
             usernameAccepted = true;
         } else if (data.startsWith("+OK")) {
-            client.setLastMessage("");
-            dataAccepted = true;
+            acceptance();
             if (data.length() > 3) {
                 System.out.println(data.substring(4));
             }
@@ -248,12 +276,10 @@ public class DataSenderRunnable implements Runnable {
             client.setCurrentUsername("");
         } else if (data.equals("-ERR Username doesn't exist.")) {
             System.out.println("Username Doesn't exist");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("-ERR Group doesn't exist.")) {
             System.out.println("Group Doesn't exist");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("+OK Goodbye")) {
             System.out.println("Quitting succesfull.");
             dataAccepted = true;
@@ -261,35 +287,27 @@ public class DataSenderRunnable implements Runnable {
             client.killProcesses();
         } else if (data.equals("-ERR groupname already exists")) {
             System.out.println("Group already exists");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("-ERR already joined this group.")) {
             System.out.println("You already joined this group.");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("-ERR not in this group")) {
             System.out.println("You are not in this group.");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("-ERR User is not in this group")) {
             System.out.println("The User is not in this group.");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("-ERR You are not the owner")) {
             System.out.println("You are not the owner of that group.");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("+OK kicked From group")) {
             System.out.println(data.substring(4));
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("-ERR You cannot kick yourself")) {
             System.out.println("You cannot kick yourself.");
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
         } else if (data.equals("-ERR Failed to receive file")) {
-            dataAccepted = true;
-            client.setLastMessage("");
+            acceptance();
             System.out.println("File transfer failed");
         } else if (data.startsWith("+OK Groups:")) {
             System.out.println(data);
@@ -297,14 +315,22 @@ public class DataSenderRunnable implements Runnable {
         latch.countDown();
     }
 
-
-    public static byte[] encrypt(PrivateKey privateKey, String message) throws Exception {
-        Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.ENCRYPT_MODE, privateKey);
-        return cipher.doFinal(message.getBytes());
+    public static byte[] encrypt(PrivateKey privateKey, String message) {
+        try {
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, privateKey);
+            return cipher.doFinal(message.getBytes());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public void kill() {
         this.kill = true;
+    }
+
+    private void acceptance() {
+        dataAccepted = true;
+        client.setLastMessage("");
     }
 }
