@@ -1,9 +1,12 @@
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+
 import javax.crypto.Cipher;
 import java.io.*;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.net.Socket;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
@@ -21,6 +24,7 @@ public class DataSenderRunnable implements Runnable {
     private boolean dataAccepted;
 
     private PrivateKey privateKey;
+    private PublicKey publicKey;
 
 
     public DataSenderRunnable(Client client, Socket socket) {
@@ -32,6 +36,7 @@ public class DataSenderRunnable implements Runnable {
     @Override
     public void run() {
         privateKey = client.getPrivateKey();
+        publicKey = client.getPublicKey();
         try {
             while (!usernameAccepted && !kill) {
                 if (client.getCurrentUsername().equals("")) {
@@ -225,16 +230,14 @@ public class DataSenderRunnable implements Runnable {
             byte[] encryptmsg = encrypt(privateKey, message);
             if (encryptmsg != null) {
 
-                byte[] buffer = new byte[4096];
-
-                byte[] size = (message.length()+"").getBytes();
+                byte[] size = (encryptmsg.length + "").getBytes();
                 size = Arrays.copyOf(size, 4096);
-                dos.write(size);
-
 
                 PrintWriter writer = new PrintWriter(dos);
-                writer.println("MSG " + recepient + " " + encryptmsg);
+                writer.println("MSG " + recepient);
                 writer.flush();
+
+                dos.write(size);
             }
         } catch (IOException ioe) {
 
@@ -265,6 +268,7 @@ public class DataSenderRunnable implements Runnable {
     public void receivedData(String data) {
 //        System.out.println(data);
         if (data.equals("+OK " + client.getCurrentUsername())) {
+//            sendPublicKey();
             usernameAccepted = true;
         } else if (data.startsWith("+OK")) {
             acceptance();
@@ -313,6 +317,11 @@ public class DataSenderRunnable implements Runnable {
             System.out.println(data);
         }
         latch.countDown();
+    }
+
+    private void sendPublicKey() throws IOException{
+
+
     }
 
     public static byte[] encrypt(PrivateKey privateKey, String message) {
