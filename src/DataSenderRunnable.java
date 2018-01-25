@@ -1,13 +1,17 @@
 import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
+import sun.misc.BASE64Encoder;
 
 import javax.crypto.Cipher;
 import java.io.*;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.Socket;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -96,6 +100,7 @@ public class DataSenderRunnable implements Runnable {
                             sendPrivateMessage(recipient, message);
                         } else{
                             System.out.println("Invalid message");
+                            acceptance();
                         }
                     } else if (message.startsWith("MKGRP")) {
                         String[] parse = message.split(" ");
@@ -148,6 +153,31 @@ public class DataSenderRunnable implements Runnable {
                             System.out.println("Groupname not accepted");
                             client.setLastMessage("");
                         }
+                    } else if(message.startsWith("SENDKEY")){
+                        try {
+                            sendPublicKey();
+                        }catch (IOException io){
+                            System.out.println("Sending of publickey went wrong");
+                        }
+
+                    } else if (message.startsWith("GETKEY")) {
+                        String[] parse = message.split(" ");
+                        boolean isValidUsername = false;
+                        if (parse.length > 1) {
+                            String username = parse[1];
+                            isValidUsername = username.matches("[a-zA-Z0-9_]{3,14}");
+                        } else {
+                            System.out.println("invalid ");
+                            client.setLastMessage("");
+                            break;
+                        }
+                        if (isValidUsername) {
+                            sendMessage(message);
+                        } else {
+                            System.out.println("Groupname or Username not accepted");
+                            client.setLastMessage("");
+                        }
+
                     } else if (message.startsWith("KICK")) {
                         String[] parse = message.split(" ");
                         boolean isValidGroupname = false;
@@ -229,15 +259,13 @@ public class DataSenderRunnable implements Runnable {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             byte[] encryptmsg = encrypt(privateKey, message);
             if (encryptmsg != null) {
-
-                byte[] size = (encryptmsg.length + "").getBytes();
-                size = Arrays.copyOf(size, 4096);
-
+                String message64 = base64encrypt(encryptmsg);
                 PrintWriter writer = new PrintWriter(dos);
-                writer.println("MSG " + recepient);
+                writer.println("MSG " + recepient + " " + message64);
                 writer.flush();
-
-                dos.write(size);
+            }
+            else {
+                System.out.println("Something went wrong in MSG");
             }
         } catch (IOException ioe) {
 
@@ -268,8 +296,12 @@ public class DataSenderRunnable implements Runnable {
     public void receivedData(String data) {
 //        System.out.println(data);
         if (data.equals("+OK " + client.getCurrentUsername())) {
-//            sendPublicKey();
             usernameAccepted = true;
+            try {
+                sendPublicKey();
+            }catch (IOException io){
+                System.out.println("Key exchange went wrong");
+            }
         } else if (data.startsWith("+OK")) {
             acceptance();
             if (data.length() > 3) {
@@ -284,7 +316,15 @@ public class DataSenderRunnable implements Runnable {
         } else if (data.equals("-ERR Group doesn't exist.")) {
             System.out.println("Group Doesn't exist");
             acceptance();
-        } else if (data.equals("+OK Goodbye")) {
+        } else if (data.startsWith("GETKEY")){
+            String[] splits = data.split(" ");
+            if (splits.length > 2){
+                String name = splits[1];
+                stringToKey(name , splits[2]);
+                System.out.println("Key added from " + name);
+                acceptance();
+            }
+        }else if (data.equals("+OK Goodbye")) {
             System.out.println("Quitting succesfull.");
             dataAccepted = true;
             client.stopConnecting();
@@ -320,11 +360,12 @@ public class DataSenderRunnable implements Runnable {
     }
 
     private void sendPublicKey() throws IOException{
-
-
+        byte[] message = publicKey.getEncoded();
+        String key = base64encrypt(message);
+        sendMessage("SENDKEY " + key);
     }
 
-    public static byte[] encrypt(PrivateKey privateKey, String message) {
+    private static byte[] encrypt(PrivateKey privateKey, String message) {
         try {
             Cipher cipher = Cipher.getInstance("RSA");
             cipher.init(Cipher.ENCRYPT_MODE, privateKey);
@@ -334,6 +375,16 @@ public class DataSenderRunnable implements Runnable {
         }
     }
 
+    private static String base64encrypt(byte[] message){
+        String message64 = Base64.getEncoder().encodeToString(message);
+        return message64;
+    }
+
+    private byte[] base64decrypt(String message64) {
+        byte[] message = Base64.getDecoder().decode(message64);
+        return message;
+    }
+
     public void kill() {
         this.kill = true;
     }
@@ -341,5 +392,17 @@ public class DataSenderRunnable implements Runnable {
     private void acceptance() {
         dataAccepted = true;
         client.setLastMessage("");
+    }
+
+    private void stringToKey(String username, String message64){
+
+        byte [] almostkey = base64decrypt(message64);
+        try {
+            PublicKey publicKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(almostkey));
+            client.putKey(username, publicKey);
+            System.out.println("Key added");
+        } catch (GeneralSecurityException gse) {
+            System.out.println("Problem reinstanceiating Publickey");
+        }
     }
 }

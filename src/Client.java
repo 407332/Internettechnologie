@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.Socket;
 import java.security.*;
+import java.util.HashMap;
 
 public class Client {
 
@@ -17,6 +18,8 @@ public class Client {
     private KeyPair keyPair;
     private PublicKey publicKey;
     private PrivateKey privateKey;
+
+    private HashMap<String, PublicKey> publickeys = new HashMap<>();
 
 
     public static void main(String[] args) throws IOException {
@@ -99,7 +102,7 @@ public class Client {
 
     public static KeyPair buildKeyPair() {
         try {
-            final int keySize = 2048;
+            final int keySize = 1024;
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
             keyPairGenerator.initialize(keySize);
             return keyPairGenerator.genKeyPair();
@@ -116,4 +119,11 @@ public class Client {
         return privateKey;
     }
 
+    public void putKey(String name, PublicKey key){
+        publickeys.put(name, key);
+    }
+
+    public PublicKey getkeyfromlist(String name){
+        return publickeys.get(name);
+    }
 }
